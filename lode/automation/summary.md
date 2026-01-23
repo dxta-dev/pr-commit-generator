@@ -1,5 +1,7 @@
 Automation is now run outside GitHub Actions (for example via Railway cron) and only touches bot-created PRs defined by the `auto/` branch prefix and `automation` label. The runner is `scripts/github-ci.sh` (bash with git + `gh` + `jq`) and writes to `automation/heartbeat.txt` so changes are isolated from product code. It requires `GITHUB_TOKEN` plus `GITHUB_REPOSITORY` or `REPO_FULL` for API access, can reuse or clone the repository if it is not already inside a git checkout, and rewrites the `origin` remote to an HTTPS token URL so pushes work in headless containers.
 
+The runner lists automation PRs with `gh pr list` and filters them by branch prefix or label using `jq`.
+
 ```sh
 export BASE_BRANCH="main"
 export AUTOMATION_BRANCH_PREFIX="auto"

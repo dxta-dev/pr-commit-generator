@@ -84,8 +84,8 @@ list_automation_pulls() {
     --repo "$repo_full" \
     --state open \
     --json number,headRefName,labels \
-    | jq -c --arg prefix "${branch_prefix}/" --arg label "$label" \
-      '.[] | select(.headRefName | startswith($prefix) or any(.labels[]?; .name == $label))'
+    | jq -c --arg prefix "${branch_prefix}/" --arg label_name "$label" \
+      '.[] | select(.headRefName | startswith($prefix) or any(.labels[]?; .name == $label_name))'
 }
 
 create_pull_requests() {
