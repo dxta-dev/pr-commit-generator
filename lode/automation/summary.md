@@ -2,6 +2,8 @@ Automation is now run outside GitHub Actions (for example via Railway cron) and 
 
 The runner lists automation PRs with `gh pr list` and filters them by branch prefix or label using `jq`. Merge targets attempt a rebase via `gh api PUT /repos/{owner}/{repo}/pulls/{number}/update-branch` before `gh pr merge`, but merges still proceed even if the rebase fails. `AUTOMATION_FILE_PATH` provides the directory prefix for heartbeat files.
 
+At the end of each run, the script logs a summary count of created, closed, merged PRs, the total errors, and a compact list of error tags (e.g. `merge_pr:#123`).
+
 ```sh
 export BASE_BRANCH="main"
 export AUTOMATION_BRANCH_PREFIX="auto"
