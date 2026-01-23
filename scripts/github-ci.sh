@@ -38,6 +38,12 @@ require_command git
 require_command gh
 require_command jq
 
+created_count=0
+closed_count=0
+merged_count=0
+error_count=0
+error_messages=()
+
 ensure_git_repository() {
   if ! git rev-parse --show-toplevel >/dev/null 2>&1; then
     echo "Git repository not found. Run the automation inside a cloned repo (mount it into the container and set the working directory accordingly)." >&2
@@ -106,6 +112,7 @@ create_pull_requests() {
 
   for ((i=1; i<=count; i++)); do
     local branch_name
+    local heartbeat_file
     branch_name="${branch_prefix}/${run_stamp}-${i}"
     git checkout "$base_branch"
     git pull --ff-only origin "$base_branch"
@@ -115,14 +122,19 @@ create_pull_requests() {
     git commit -m "chore: heartbeat $branch_name"
     git push -u origin "$branch_name"
 
-    gh pr create \
+    if gh pr create \
       --repo "$repo_full" \
       --base "$base_branch" \
       --head "$branch_name" \
       --title "Automation: $branch_name" \
       --body "Automated PR generated on schedule." \
       --label "$label" \
-      >/dev/null
+      >/dev/null; then
+      created_count=$((created_count + 1))
+    else
+      error_count=$((error_count + 1))
+      error_messages+=("create_pr:$branch_name")
+    fi
   done
 }
 
@@ -131,7 +143,12 @@ close_pull_requests() {
   for pr_line in "${pr_lines[@]}"; do
     local number
     number=$(jq -r '.number' <<<"$pr_line")
-    gh pr close "$number" --repo "$repo_full"
+    if gh pr close "$number" --repo "$repo_full"; then
+      closed_count=$((closed_count + 1))
+    else
+      error_count=$((error_count + 1))
+      error_messages+=("close_pr:#$number")
+    fi
   done
 }
 
@@ -139,6 +156,7 @@ update_pull_branches() {
   local pr_lines=($@)
   for pr_line in "${pr_lines[@]}"; do
     local branch_name
+    local heartbeat_file
     branch_name=$(jq -r '.headRefName' <<<"$pr_line")
     git fetch origin "$branch_name"
     git checkout "$branch_name"
@@ -160,9 +178,15 @@ rebase_and_merge_pulls() {
       --silent \
       "/repos/${repo_full}/pulls/${number}/update-branch"; then
       echo "Update branch failed for PR #$number" >&2
+      error_count=$((error_count + 1))
+      error_messages+=("rebase_pr:#$number")
     fi
-    if ! gh pr merge "$number" --repo "$repo_full" --squash; then
+    if gh pr merge "$number" --repo "$repo_full" --squash; then
+      merged_count=$((merged_count + 1))
+    else
       echo "Merge failed for PR #$number" >&2
+      error_count=$((error_count + 1))
+      error_messages+=("merge_pr:#$number")
     fi
   done
 }
@@ -258,6 +282,10 @@ main() {
   fi
 
   git checkout "$base_branch"
+  echo "Summary: created=${created_count} closed=${closed_count} merged=${merged_count} errors=${error_count}"
+  if (( ${#error_messages[@]} > 0 )); then
+    printf 'Errors: %s\n' "${error_messages[*]}"
+  fi
 }
 
 main "$@"
