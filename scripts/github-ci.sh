@@ -173,14 +173,6 @@ rebase_and_merge_pulls() {
   for pr_line in "${pr_lines[@]}"; do
     local number
     number=$(jq -r '.number' <<<"$pr_line")
-    if ! gh api \
-      --method PUT \
-      --silent \
-      "/repos/${repo_full}/pulls/${number}/update-branch"; then
-      echo "Update branch failed for PR #$number" >&2
-      error_count=$((error_count + 1))
-      error_messages+=("rebase_pr:#$number")
-    fi
     if gh pr merge "$number" --repo "$repo_full" --squash --auto; then
       merged_count=$((merged_count + 1))
     else
