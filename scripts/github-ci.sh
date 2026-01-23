@@ -50,6 +50,12 @@ ensure_git_identity() {
   git config user.email "github-actions[bot]@users.noreply.github.com"
 }
 
+ensure_git_remote_auth() {
+  local auth_url
+  auth_url="https://x-access-token:${token}@github.com/${repo_full}.git"
+  git remote set-url origin "$auth_url"
+}
+
 append_heartbeat() {
   local branch_name="$1"
   mkdir -p "$(dirname "$heartbeat_path")"
@@ -161,6 +167,7 @@ main() {
 
   ensure_git_repository
   ensure_git_identity
+  ensure_git_remote_auth
   git fetch origin --prune
 
   local create_count
