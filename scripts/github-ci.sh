@@ -181,7 +181,7 @@ rebase_and_merge_pulls() {
       error_count=$((error_count + 1))
       error_messages+=("rebase_pr:#$number")
     fi
-    if gh pr merge "$number" --repo "$repo_full" --squash; then
+    if gh pr merge "$number" --repo "$repo_full" --squash --auto; then
       merged_count=$((merged_count + 1))
     else
       echo "Merge failed for PR #$number" >&2
