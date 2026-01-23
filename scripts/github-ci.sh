@@ -56,10 +56,17 @@ ensure_git_remote_auth() {
   git remote set-url origin "$auth_url"
 }
 
-append_heartbeat() {
+write_heartbeat() {
   local branch_name="$1"
-  mkdir -p "$(dirname "$heartbeat_path")"
-  printf '%s %s\n' "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" "$branch_name" >> "$heartbeat_path"
+  local stamp
+  stamp=$(date -u +"%Y-%m-%dT%H-%M-%SZ")
+  local heartbeat_dir
+  heartbeat_dir=$(dirname "$heartbeat_path")
+  mkdir -p "$heartbeat_dir"
+  local heartbeat_file
+  heartbeat_file="${heartbeat_dir}/heartbeat-${stamp}-${branch_name//\//-}.txt"
+  printf '%s %s\n' "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" "$branch_name" > "$heartbeat_file"
+  echo "$heartbeat_file"
 }
 
 random_int() {
@@ -103,8 +110,8 @@ create_pull_requests() {
     git checkout "$base_branch"
     git pull --ff-only origin "$base_branch"
     git checkout -b "$branch_name"
-    append_heartbeat "$branch_name"
-    git add "$heartbeat_path"
+    heartbeat_file=$(write_heartbeat "$branch_name")
+    git add "$heartbeat_file"
     git commit -m "chore: heartbeat $branch_name"
     git push -u origin "$branch_name"
 
@@ -136,8 +143,8 @@ update_pull_branches() {
     git fetch origin "$branch_name"
     git checkout "$branch_name"
     git pull --ff-only origin "$branch_name"
-    append_heartbeat "$branch_name"
-    git add "$heartbeat_path"
+    heartbeat_file=$(write_heartbeat "$branch_name")
+    git add "$heartbeat_file"
     git commit -m "chore: update $branch_name"
     git push origin "$branch_name"
   done
@@ -148,9 +155,11 @@ rebase_and_merge_pulls() {
   for pr_line in "${pr_lines[@]}"; do
     local number
     number=$(jq -r '.number' <<<"$pr_line")
-    if ! gh pr update-branch "$number" --repo "$repo_full"; then
+    if ! gh api \
+      --method PUT \
+      --silent \
+      "/repos/${repo_full}/pulls/${number}/update-branch"; then
       echo "Update branch failed for PR #$number" >&2
-      continue
     fi
     if ! gh pr merge "$number" --repo "$repo_full" --squash; then
       echo "Merge failed for PR #$number" >&2
