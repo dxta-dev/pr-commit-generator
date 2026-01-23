@@ -85,7 +85,7 @@ list_automation_pulls() {
     --state open \
     --json number,headRefName,labels \
     | jq -c --arg prefix "${branch_prefix}/" --arg label "$label" \
-      '.[] | select(.headRefName | startswith($prefix) or (.labels[]?.name == $label))'
+      '.[] | select(.headRefName | startswith($prefix) or any(.labels[]?; .name == $label))'
 }
 
 create_pull_requests() {
@@ -161,8 +161,16 @@ main() {
   local repo_dir
   repo_dir=${REPO_DIR:-$(basename "$repo_full")}
   if ! git rev-parse --show-toplevel >/dev/null 2>&1; then
-    git clone "https://github.com/$repo_full.git" "$repo_dir"
-    cd "$repo_dir"
+    if [[ -d "$repo_dir" ]]; then
+      cd "$repo_dir"
+      if ! git rev-parse --show-toplevel >/dev/null 2>&1; then
+        echo "Existing directory $repo_dir is not a git repository." >&2
+        exit 1
+      fi
+    else
+      git clone "https://github.com/$repo_full.git" "$repo_dir"
+      cd "$repo_dir"
+    fi
   fi
 
   ensure_git_repository
