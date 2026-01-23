@@ -150,6 +150,7 @@ rebase_and_merge_pulls() {
     number=$(jq -r '.number' <<<"$pr_line")
     if ! gh pr update-branch "$number" --repo "$repo_full"; then
       echo "Update branch failed for PR #$number" >&2
+      continue
     fi
     if ! gh pr merge "$number" --repo "$repo_full" --squash; then
       echo "Merge failed for PR #$number" >&2
