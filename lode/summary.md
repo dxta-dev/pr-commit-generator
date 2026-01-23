@@ -1,16 +1,14 @@
-This repository automates GitHub PR churn via a scheduled workflow that creates, updates, closes, and merges automation-scoped PRs on a 5-minute cadence using a TypeScript runner.
+This repository automates GitHub PR churn via a scheduled workflow that creates, updates, closes, and merges automation-scoped PRs on a 5-minute cadence using the bash `gh` runner (`scripts/github-ci.sh`).
 
-```ts
-export type AutomationScope = {
-  branchPrefix: string;
-  label: string;
-  heartbeatPath: string;
-};
+```sh
+export AUTOMATION_BRANCH_PREFIX="auto"
+export AUTOMATION_LABEL="automation"
+export AUTOMATION_FILE_PATH="automation/heartbeat.txt"
 ```
 
 ```mermaid
 flowchart TD
-  A[Scheduled Workflow] --> B[Run TS Automation]
+  A[Scheduled Workflow] --> B[Run Automation Runner]
   B --> C[Create PRs]
   B --> D[Update PRs]
   B --> E[Close PRs]
